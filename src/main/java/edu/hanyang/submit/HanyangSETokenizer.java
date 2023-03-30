@@ -1,5 +1,6 @@
 package edu.hanyang.submit;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,8 +43,12 @@ public class HanyangSETokenizer implements Tokenizer {
     					stream.getAttribute(
     							CharTermAttribute.class).toString()));
     		}
+    		stream.close();
+    	} catch (IOException e) {
+    		throw new RuntimeException(e);
     	}
-        return null;
+   
+        return result;
     }
 
     /**
@@ -52,5 +57,12 @@ public class HanyangSETokenizer implements Tokenizer {
     @Override
     public void clean() {
         // TODO: your code here...
+    	analyzer.close();
+    }
+    private String stemString(String word) {
+    	s.setCurrent(word);
+    	s.stem();
+    	return s.getCurrent();
+    }
     }
 }
