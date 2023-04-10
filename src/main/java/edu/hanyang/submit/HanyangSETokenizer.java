@@ -10,13 +10,13 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.tartarus.snowball.ext.PorterStemmer;
 
 import io.github.hyerica_bdml.indexer.Tokenizer;
 
-
 public class HanyangSETokenizer implements Tokenizer {
 	private Analyzer analyzer = null;
-	private PoterStemmer s = null;
+	private PorterStemmer s = null;
     /**
      * Tokenizer 객체를 생성하고 준비하는 단계
      */
@@ -24,7 +24,7 @@ public class HanyangSETokenizer implements Tokenizer {
     public void setup() {
         // TODO: your code here...
     	analyzer = new SimpleAnalyzer();
-    	s = new PoterStemmer();
+    	s = new PorterStemmer();
     }
 
     /**
@@ -38,7 +38,8 @@ public class HanyangSETokenizer implements Tokenizer {
     	List<String> result = new ArrayList<String>();
     	try {
     		TokenStream stream = analyzer.tokenStream(null, new StringReader(str));
-    		while (Stream.incrementToken()) {
+    		stream.reset();
+    		while (stream.incrementToken()) {
     			result.add(stemString(
     					stream.getAttribute(
     							CharTermAttribute.class).toString()));
@@ -64,5 +65,5 @@ public class HanyangSETokenizer implements Tokenizer {
     	s.stem();
     	return s.getCurrent();
     }
-    }
+    
 }
