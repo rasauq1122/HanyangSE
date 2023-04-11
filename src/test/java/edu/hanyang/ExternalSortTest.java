@@ -6,6 +6,7 @@ import io.github.hyerica_bdml.indexer.ExternalSort;
 import java.lang.management.ManagementFactory;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -13,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@Ignore("Delete this line to unit test stage 2")
 public class ExternalSortTest {
 
     private static final String INPUT_DATA_PATH = "data/input_10000000.data";
