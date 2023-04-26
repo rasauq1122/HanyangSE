@@ -54,6 +54,14 @@ public class HanyangSEExternalSort implements ExternalSort {
     			for (int j = 0 ; j < 3 ; j++) leaf[j][i] = istream.readInt();
     		}
     		
+    		leaf_quick_sort(0, now_size-1);
+    		
+    		DataOutputStream ostream = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmpdir + "/" + nxt_tmp_file + ".data")));
+    		for (int i = 0 ; i < now_size ; i++) {
+    			for (int j = 0 ; j < 3 ; j++) ostream.writeInt(leaf[j][i]);
+    		}
+    		
+    		nxt_tmp_file++;
     		leaf = null;
     	}
     	
