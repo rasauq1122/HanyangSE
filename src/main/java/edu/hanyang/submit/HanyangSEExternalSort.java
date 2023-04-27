@@ -29,9 +29,51 @@ public class HanyangSEExternalSort implements ExternalSort {
 	private int nxt_tmp_file = 0;
 	private int[][] leaf = null;
 	
+	private int cmp(int l, int r) {
+		if (leaf[0][l] != leaf[0][r]) return (leaf[0][l] > leaf[0][r] ? l : r);
+		if (leaf[1][l] != leaf[1][r]) return (leaf[1][l] > leaf[1][r] ? l : r);
+		return (leaf[2][l] > leaf[2][r] ? l : r);
+	}
+	
+	private void swap(int l, int r) {
+		int tmp[] = {leaf[0][l], leaf[1][l], leaf[2][l]};
+		for (int i = 0 ; i < 3 ; i++) {
+			leaf[i][l] = leaf[i][r];
+			leaf[i][r] = tmp[i];
+		}
+		tmp = null;
+	}
+	
+	private void print(int i) {
+		System.out.println(i + " : " + leaf[0][i] + " " + leaf[1][i] + " " + leaf[2][i]);
+	}
+	
 	private void leaf_quick_sort(int l, int r) {
 		// TODO: quicksort를 구현, leaf[0] ~ leaf[2]의 값을 순차적으로 비교하도록 한다.
 		
+		if (l >= r) return;
+		if (l+1 == r) {
+			if (cmp(l, r) == l) swap(l, r);
+			return;
+		}
+		
+		int mid = (l+r)/2;
+		int pivot = cmp(l, r);
+		if (cmp(pivot, mid) == pivot) pivot = cmp(pivot == l ? r : l, mid);
+		// pivot은 leaf[l], leaf[mid], leaf[r] 중 중간값을 선택한다.
+		
+		if (pivot != r) swap(pivot, r);
+
+		int lo = l;
+		for (int hi = l; hi < r ; hi++) {
+			if (cmp(r, hi) == r) {
+				swap(lo, hi);
+				lo++;
+			}
+		}
+		swap(lo, r);
+		leaf_quick_sort(l, lo-1);
+		leaf_quick_sort(lo+1, r);
 	}
 	
 	
@@ -60,6 +102,7 @@ public class HanyangSEExternalSort implements ExternalSort {
     		for (int i = 0 ; i < now_size ; i++) {
     			for (int j = 0 ; j < 3 ; j++) ostream.writeInt(leaf[j][i]);
     		}
+    		ostream.close();
     		
     		nxt_tmp_file++;
     		leaf = null;
