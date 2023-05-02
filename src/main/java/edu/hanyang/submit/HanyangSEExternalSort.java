@@ -213,13 +213,13 @@ public class HanyangSEExternalSort implements ExternalSort {
 		int sibling = (tmp_length-1)/M + 1;
 		
 		for (int i = 0 ; i < sibling ; i++) {
-			int using_blocks = (i+1 == sibling ? tmp_length%M : M);
+			int using_blocks = (i+1 == sibling ? tmp_length : M);
 			
 			heap = new int[using_blocks];
 			hval = new int[3][using_blocks];
 			buff = new DataInputStream[using_blocks];
 	    	for (int j = 0 ; j < using_blocks ; j++) {
-	    		buff[j] = new DataInputStream(new BufferedInputStream(new FileInputStream(tmpdir + (M*i + j) + ".data"), blocksize));
+	    		buff[j] = new DataInputStream(new BufferedInputStream(new FileInputStream(tmpdir + (M*i + j) + ".data"), (nblocks/using_blocks)*blocksize));
 	    		heap_insert(j);
 	    	}
 	    	
@@ -252,6 +252,7 @@ public class HanyangSEExternalSort implements ExternalSort {
 	    	tmp_file = null;
 	    	
 	    	nxt_tmp_file++;
+	    	tmp_length -= M;
     	}
 		
 		if (sibling > 1) 
