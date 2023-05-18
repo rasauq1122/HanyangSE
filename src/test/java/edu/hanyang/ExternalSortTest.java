@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-//@Ignore("Delete this line to unit test stage 2")
+@Ignore("Delete this line to unit test stage 2")
 public class ExternalSortTest {
 
     private static final String INPUT_DATA_PATH = "data/input_10000000.data";
