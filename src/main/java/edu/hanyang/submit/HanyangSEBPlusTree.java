@@ -35,6 +35,10 @@ public class HanyangSEBPlusTree implements BPlusTree {
 	
 	// for debug
 	private int counts = 0;
+	private boolean reading = false;
+	private boolean debug = false;
+	private boolean[] check = new boolean[1000];
+	private int bad = -1;
 	
 	private byte[] int_to_byte(int n) {
 		return new byte[] {(byte) (n>>24), (byte) ((n>>16)&255), (byte) ((n>>8)&255), (byte) (n&255)};
@@ -58,7 +62,7 @@ public class HanyangSEBPlusTree implements BPlusTree {
 	private int[] byte_to_ints(byte[] bytes, int len) {
 		int lim = len/4;
 		for (int i = 0 ; i < lim ; i++) {
-			if (byte_to_int(new byte[] {bytes[i*4], bytes[i*4+1], bytes[i*4+2], bytes[i*4+3]}) == 0) {
+			if (byte_to_int(new byte[] {bytes[i*4], bytes[i*4+1], bytes[i*4+2], bytes[i*4+3]}) == -1) {
 				lim = i;
 				break;
 			}
@@ -110,6 +114,8 @@ public class HanyangSEBPlusTree implements BPlusTree {
     		meta.read(bytes);
     		this.height = byte_to_int(bytes);
     		meta.close();
+    		
+    		reading = true;
     	}
     	else { // metafile doesn't exist
     		RandomAccessFile meta = new RandomAccessFile(metafile, "rw");
@@ -160,7 +166,7 @@ public class HanyangSEBPlusTree implements BPlusTree {
     	
     	int insert_idx;
     	int[] new_block = new int[2*fanout - 1 + (key_ptr[0].length+1 == fanout ? 2 : 0)];
-//    	for (int i = 0 ; i < new_block.length ; i++) new_block[i] = -1;
+    	for (int i = 0 ; i < new_block.length ; i++) new_block[i] = -1;
     	// insert 되는 블록의 크기는 가득 차지 않았으면 기존의 블록만큼만 할당, 가득 찼다면 추가로 2개를 더 할당.
     	
 		// copy keys less than key
@@ -170,9 +176,12 @@ public class HanyangSEBPlusTree implements BPlusTree {
 					new_block[2*insert_idx] = key_ptr[1][insert_idx];
 				break;
 			}
-			
 			new_block[2*insert_idx] = key_ptr[1][insert_idx];
 			new_block[2*insert_idx+1] = key_ptr[0][insert_idx];
+		}
+
+		if (!is_leaf && insert_idx == key_ptr[0].length) {
+			new_block[2*insert_idx] = key_ptr[1][insert_idx];
 		}
 		
 		new_block[2*insert_idx + (is_leaf ? 0 : 2)] = ptr;
@@ -180,7 +189,7 @@ public class HanyangSEBPlusTree implements BPlusTree {
 		
 		// copy keys more than key
 		for (; insert_idx < key_ptr[0].length ; insert_idx++) {
-			new_block[2*insert_idx+2 + (is_leaf ? 0 : 2)] = key_ptr[1][insert_idx];
+			new_block[2*insert_idx+2 + (is_leaf ? 0 : 2)] = key_ptr[1][insert_idx + (is_leaf ? 0 : 1)];
 			new_block[2*insert_idx+3] = key_ptr[0][insert_idx];
 		}
 		
@@ -195,6 +204,7 @@ public class HanyangSEBPlusTree implements BPlusTree {
      */
     @Override
     public void insert(int key, int value) throws IOException, AssertionError {
+    	if (key < 1000) check[key] = true;
     	counts++;	
 //    	if (counts % 1000 == 0) System.out.println(height);
 //    	if (counts < 10) System.out.println("! "+key+" "+value);
@@ -207,6 +217,7 @@ public class HanyangSEBPlusTree implements BPlusTree {
     	
     	int max_key = this.fanout - 1;
     	int leaf_idx = this.path[this.height];
+    	if (key == bad) System.out.println("BAD idx is " + leaf_idx);
     	int[] block = readBlock(leaf_idx);
     	int[][] leaf_key_ptr = divide(block, true);
     	   	
@@ -214,16 +225,26 @@ public class HanyangSEBPlusTree implements BPlusTree {
     		int new_key = split(key, value, leaf_idx, true);
     		if (this.height > 0) internalInsert(new_key, last_node, this.height-1);
     		else newRoot(new_key, leaf_idx, last_node);
+    		
+//    		int[] root = readBlock(root_node);
+//    		System.out.print("Root : ");
+//        	for (int i = 0 ; i < root.length ; i++) {
+//        		System.out.print(root[i]+" ");
+//        	}
+//        	System.out.println();
+        			
     	}
     	else { // simple insert (leaf)
     		int[] new_block = _insert(key, value, leaf_key_ptr, true);
     		writeBlock(leaf_idx, new_block);
     	}
+    	
+    	
     }
     
     private int split(int key, int ptr, int idx, boolean is_leaf) throws IOException {
     	// must retrun first key of new node
-//    	System.out.println(counts+" "+height);
+//    	System.out.println("SPL "+counts+" "+key+" "+idx);
 		last_node++;
     	int mid = fanout/2; // fanout은 max key + 1 이다.
     	int[][] key_ptr = divide(readBlock(idx), is_leaf);
@@ -233,30 +254,37 @@ public class HanyangSEBPlusTree implements BPlusTree {
     	int[] old_block = new int[fanout*2 - 1];
     	int[] new_block = new int[fanout*2 - 1];
 
-//    	for (int i = 0 ; i < old_block.length ; i++) old_block[i] = -1;
-//    	for (int i = 0 ; i < new_block.length ; i++) new_block[i] = -1;
+    	for (int i = 0 ; i < old_block.length ; i++) old_block[i] = -1;
+    	for (int i = 0 ; i < new_block.length ; i++) new_block[i] = -1;
+    	
+//    	if (counts == 512) {
+//	    	for (int i = 0 ; i < fanout ; i++) System.out.print(inserted[2*i + 1]+ " ");
+//	    	System.out.println();
+//    	}
+    	
+    	int pass = -1;
     	
     	if (!is_leaf) { // internal node split
     		// 중간에 있는 원소는 부모에게 넘김. 
         	// old_block.child <= new_block.child
-    		for (int i = 0 ; i < mid ; i++) {
+    		for (int i = 0 ; i < mid-1 ; i++) {
     			old_block[2*i] = inserted[2*i];
     			old_block[2*i+1] = inserted[2*i+1];
     		}
-    		old_block[2*mid] = inserted[2*mid];
-    		// 0 ~ 2*mid
+    		old_block[2*mid-2] = inserted[2*mid];
+    		// 0 ~ 2*mid-2
     		
-    		for (int i = mid+1 ; i < fanout ; i++) { 
-    			new_block[2*(i - (mid+1))] = inserted[2*i];
-    			new_block[2*(i - (mid+1)) + 1] = inserted[2*i+1];
+    		for (int i = mid ; i < fanout ; i++) { 
+    			new_block[2*(i - mid)] = inserted[2*i];
+    			new_block[2*(i - mid) + 1] = inserted[2*i+1];
     		}
-    		new_block[2*(fanout - (mid+1))] = inserted[2*fanout];
-    		// 2*mid+2 ~ 2*fanout
+    		new_block[2*(fanout - mid)] = inserted[2*fanout];
+    		// 2*mid ~ 2*fanout
     		
         	writeBlock(idx, old_block);
         	writeBlock(last_node, new_block);
         	
-    		return inserted[2*mid + 1];
+    		pass = inserted[2*mid - 1];
     	}
     	else { // simple split (leaf)
         	// old_block.child >= new_block.child
@@ -272,16 +300,19 @@ public class HanyangSEBPlusTree implements BPlusTree {
         	writeBlock(idx, old_block);
         	writeBlock(last_node, new_block);
         	
-        	return new_block[1];
+        	pass = inserted[2*mid + 1];
     	}
+    	
+    	return pass;
     }
     
     private void newRoot(int key, int left, int right) throws IOException {
-//    	System.out.println(counts +" "+ last_node);
     	root_node = ++last_node;
     	height++;
+//    	System.out.println(root_node + " (" + key + ") : " + left + ", " + right);
     	
     	int[] block = new int[2*fanout - 1];
+    	for (int i = 0 ; i < 2*fanout - 1 ; i++) block[i] = -1;
     	block[0] = left;
     	block[1] = key;
     	block[2] = right;
@@ -314,14 +345,8 @@ public class HanyangSEBPlusTree implements BPlusTree {
     public int search(int key) throws IOException {
         // TODO: your code here...
     	path = new int[height+1]; // insert할 때 편하게 하려고 선언함.
-//    	for (int i = 0 ; i <= height ; i++) path[i] = -1;
+    	for (int i = 0 ; i <= height ; i++) path[i] = -1;
         int val = _search(key, root_node, 0);
-        if (key == 1) {
-        	for (int i = 0 ; i < height+1 ; i++) {
-        		System.out.print(path[i] + " ");
-        	}
-        	System.out.println(); 
-        }
         return val;
     }
     
@@ -330,7 +355,6 @@ public class HanyangSEBPlusTree implements BPlusTree {
 
     	int[][] key_ptr = divide(readBlock(idx), depth == height); // key_ptr[0] : key | key_ptr[1] : ptr
 
-    	if (key_ptr[0].length == 0) System.out.println(counts); // 디버그 필요. 그리고 기본값을 모두 -1로 해야함. 0이 입력으로 들어옴.
     	if (key_ptr[0].length == 0) return -1;
     	
     	if (key < key_ptr[0][0]) {
@@ -339,21 +363,37 @@ public class HanyangSEBPlusTree implements BPlusTree {
     	}
     	
     	// binary search
-    	int lo = 0, hi = key_ptr[0].length-1;
-    	while (lo+1 < hi) {
-//    		System.out.println(lo + " " + hi);
-    		int mid = (lo+hi)/2;
-    		if (key < key_ptr[0][mid]) hi = mid - 1;
-    		else lo = mid;
+//    	int lo = 0, hi = key_ptr[0].length-1;
+//    	while (lo+1 < hi) {
+//    		int mid = (lo+hi)/2;
+//    		
+//    		if (key_ptr[0][mid] > key) hi = mid;
+//    		else lo = mid;
+//    		
+//    		if (key == bad) {
+//    			System.out.println(lo + " " + hi+ " " + mid);
+//    		}
+//    	}
+//    	if (key == bad) System.out.println(lo + " -> " + key_ptr[1][lo+1]);
+//    	if (depth == height) { // leaf node
+//    		if (key_ptr[0][lo] == key) return key_ptr[1][lo];
+//    		else if (key_ptr[0][hi] == key) return key_ptr[1][hi];
+//    		else return -1; // not found
+//    	}
+//    	else { // non-leaf node
+//    		return _search(key, key_ptr[1][lo+1], depth+1);
+//    	}
+    	
+    	// linear search
+    	for (int i = 0 ; i < key_ptr[0].length ; i++) {
+    		if (key_ptr[0][i] <= key && (i+1 == key_ptr[0].length ? true : key < key_ptr[0][i+1])) {
+    			if (depth == height) return (key == key_ptr[0][i] ? key_ptr[1][i] : -1);
+    			return _search(key, key_ptr[1][i+1], depth+1);
+    		}
     	}
     	
-    	if (depth == height) { // leaf node
-    		if (key_ptr[0][lo] == key) return key_ptr[1][lo];
-    		else return -1; // not found
-    	}
-    	else { // non-leaf node
-    		return _search(key, key_ptr[1][lo+1], depth+1);
-    	}
+    	assert false;
+    	return -1;
     }
 
     /**
