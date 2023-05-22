@@ -204,20 +204,23 @@ public class HanyangSEBPlusTree implements BPlusTree {
      */
     @Override
     public void insert(int key, int value) throws IOException, AssertionError {
-    	if (key < 1000) check[key] = true;
-    	counts++;	
+//    	if (key < 1000) check[key] = true;
+//    	counts++;	
 //    	if (counts % 1000 == 0) System.out.println(height);
 //    	if (counts < 10) System.out.println("! "+key+" "+value);
     	// TODO: your code here...
 //    	if (key == 1) System.out.println(value);
     	int val = search(key); // for update variable 'path'
-    	
+//    	if (key == 1) System.out.println();
     	// no duplicate key
-    	assert val != -1;
+//    	if (val == -1) {
+//    		System.out.println(val);
+//   	 }
+    	assert val == -1;
     	
     	int max_key = this.fanout - 1;
     	int leaf_idx = this.path[this.height];
-    	if (key == bad) System.out.println("BAD idx is " + leaf_idx);
+//    	if (key == bad) System.out.println("BAD idx is " + leaf_idx);
     	int[] block = readBlock(leaf_idx);
     	int[][] leaf_key_ptr = divide(block, true);
     	   	
